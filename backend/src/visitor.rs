@@ -1,7 +1,8 @@
 /*!
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
-use crate::{parser::{Expr, Op, Stmt}, runtime::{self, RuntimeEnv, RuntimeVal}};
+use frontend::{parser::{Expr, Op, Stmt}};
+use crate::runtime::{RuntimeEnv, RuntimeVal};
 
 /// Macros that `Visitor` trait uses.
 mod visitor_macros {

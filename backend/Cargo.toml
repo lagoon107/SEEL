@@ -1,0 +1,11 @@
+[package]
+name = "backend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["dylib"]
+
+[dependencies]
+anyhow = "1.0.95"
+frontend = { version = "0.1.0", path = "../frontend" }

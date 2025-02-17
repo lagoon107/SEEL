@@ -2,6 +2,17 @@
 name = "SEEL"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
+
+[lints.rust]
+unused_unsafe = { level = "allow" }
+unsafe_op_in_unsafe_fn = { level = "deny" }
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+incremental = true
 
 [build-dependencies]
 lalrpop = "0.22.1"
@@ -9,6 +20,6 @@ anyhow = "1.0.95"
 
 [dependencies]
 anyhow = "1.0.95"
-clap = { version = "4.5.29", features = ["derive"] }
-lalrpop-util = { version = "0.22.1", features = ["lexer"] }
-thiserror = "2.0.11"
+backend = { version = "0.1.0", path = "backend" }
+clap = { version = "4.5.30", features = ["derive"] }
+frontend = { version = "0.1.0", path = "frontend" }

@@ -1,0 +1,14 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["dylib"]
+
+[lints.rust]
+unused_unsafe = { level = "allow" }
+unsafe_op_in_unsafe_fn = { level = "deny" }
+
+[dependencies]
+lalrpop-util = { version = "0.22.1", features = ["lexer"] }

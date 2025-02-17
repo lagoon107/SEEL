@@ -7,5 +7,8 @@ use clap::Parser;
 pub struct Args {
     /// Enables or disables ast output.
     #[clap(short, long)]
-    pub show_ast: bool
+    pub show_ast: bool,
+
+    /// File to parse.
+    pub file: String
 }

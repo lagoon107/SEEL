@@ -1,23 +1,17 @@
-use lalrpop_util::lalrpop_mod;
 use clap::Parser;
 use args::Args;
-
-// Add lalrpop parsed grammer file to project
-lalrpop_mod!(pub grammar);
+use backend::interpreter;
+use frontend::{grammar, helper::convert_string_to_static_str};
 
 // Mod declarations
-mod parser;
-mod interpreter;
-mod visitor;
-mod runtime;
 mod args;
 
 fn main() -> anyhow::Result<()> {
-    // Create sample code
-    let code = r#"print "Hello, world!";"#;
-
     // Get command line args
     let args = Args::parse();
+
+    // Get code from file
+    let code = std::fs::read_to_string(args.file)?;
 
     // Show ast if option enabled in args
     if args.show_ast {
@@ -25,7 +19,10 @@ fn main() -> anyhow::Result<()> {
         let parser = grammar::ProgramParser::new();
 
         // Print parsed code as ast
-        println!("{:?}", parser.parse(code)?);
+        println!("Ast:\n\t{:#?}", parser.parse(unsafe { convert_string_to_static_str(code) })?);
+    } else {
+        // Evaluate code
+        interpreter::run_code(&code)?;
     }
 
     // Return no errors
