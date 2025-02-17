@@ -9,5 +9,6 @@ anyhow = "1.0.95"
 
 [dependencies]
 anyhow = "1.0.95"
+clap = { version = "4.5.29", features = ["derive"] }
 lalrpop-util = { version = "0.22.1", features = ["lexer"] }
 thiserror = "2.0.11"

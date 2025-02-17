@@ -1,7 +1,7 @@
 /*!
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
-use crate::{parser::{Expr, Stmt}, runtime::{self, RuntimeVal}};
+use crate::{parser::{Expr, Op, Stmt}, runtime::{self, RuntimeVal}};
 
 /// Macros that `Visitor` trait uses.
 mod visitor_macros {
@@ -83,7 +83,7 @@ impl Visitor for GeneralVisitor {
     fn visit_program(&self, stmts: &Vec<Stmt>) -> Self::Target {
         // Visit all statements in program, evaluating each
         for stmt in stmts {
-            self.visit_stmt(stmt);
+            _ = self.visit_stmt(stmt)?;
         }
 
         // Return null runtime value
@@ -136,12 +136,17 @@ impl Visitor for GeneralVisitor {
             let runtime_lhs_val = self.visit_expr(&b.lhs)?;
             let runtime_rhs_val = self.visit_expr(&b.rhs)?;
 
-            // Return left + right value
+            // Return value of binary expression
             with_extract_enum_variant!{runtime_lhs_val, RuntimeVal::Num(l), {
                 with_extract_enum_variant!{runtime_rhs_val, RuntimeVal::Num(r), {
-                    return Ok(RuntimeVal::Num(l + r));
-                }}
-            }}
+                    return Ok(RuntimeVal::Num(match b.op {
+                        Op::Plus => l + r,
+                        Op::Minus => l - r,
+                        Op::Mult => l * r,
+                        Op::Div => l / r
+                    }));
+                }
+            }}}
         });
     }
 
