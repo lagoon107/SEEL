@@ -1,7 +1,7 @@
 /*!
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
-use crate::{parser::{Expr, Op, Stmt}, runtime::{self, RuntimeVal}};
+use crate::{parser::{Expr, Op, Stmt}, runtime::{RuntimeEnv, RuntimeVal}};
 
 /// Macros that `Visitor` trait uses.
 mod visitor_macros {
@@ -46,7 +46,7 @@ mod visitor_macros {
 }
 
 /// A trait that allows a struct to visit parser AST and return values.
-pub trait Visitor: Default {
+pub trait Visitor {
     /// The type to return from functions.
     type Target;
 
@@ -72,13 +72,20 @@ pub trait Visitor: Default {
 use visitor_macros::with_extract_enum_variant;
 
 /// General visitor.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct GeneralVisitor {
+    env: Box<RuntimeEnv>
+}
 
+impl GeneralVisitor {
+    /// Return a new general visitor, given a runtime environment.
+    pub fn new(env: Box<RuntimeEnv>) -> Self {
+        Self { env }
+    }
 }
 
 impl Visitor for GeneralVisitor {
-    type Target = anyhow::Result<runtime::RuntimeVal>;
+    type Target = anyhow::Result<RuntimeVal>;
     
     fn visit_program(&self, stmts: &Vec<Stmt>) -> Self::Target {
         // Visit all statements in program, evaluating each
@@ -113,6 +120,16 @@ impl Visitor for GeneralVisitor {
             // Return null because it doesn't eval to anything
             return Ok(RuntimeVal::Null);
         });
+    }
+
+    fn visit_stmt_assign(&self, stmt: &Stmt) -> Self::Target {
+        with_extract_enum_variant!(stmt, Stmt::Assign(a), {
+            // Insert var into runtime environment
+            self.env.vars.borrow_mut().insert(a.name.clone(), self.visit_expr(&a.value)?);
+        });
+
+        // Return null because this doesn't eval to anything
+        return Ok(RuntimeVal::Null);
     }
 
     fn visit_expr(&self, expr: &Box<Expr>) -> Self::Target {

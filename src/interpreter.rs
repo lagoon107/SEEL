@@ -2,11 +2,13 @@
     Contains things related to the interpreter.
 */
 
-use crate::{grammar, parser::*, visitor::{GeneralVisitor, Visitor}};
+use crate::{grammar, parser::*, runtime::RuntimeEnv, visitor::{GeneralVisitor, Visitor}};
 
 /// The interpreter that evaluates ast.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Interpreter {
-    pub ast: Vec<Stmt>
+    /// The ast to evaluate.
+    pub ast: Vec<Stmt>,
 }
 
 impl Interpreter {
@@ -16,9 +18,12 @@ impl Interpreter {
     }
 
     /// Runs the interpreter, evaluating the ast.
-    pub fn run(self) -> anyhow::Result<()> {
+    pub fn run(&self) -> anyhow::Result<()> {
+        // Create runtime environment for general visitor
+        let runtime_env = RuntimeEnv::default();
+
         // Run general visitor to evaluate everything
-        _ = GeneralVisitor::default().visit_program(&self.ast)?;
+        _ = GeneralVisitor::new(Box::new(runtime_env)).visit_program(&self.ast)?;
 
         // Return no errors
         Ok(())
@@ -31,6 +36,10 @@ pub fn run_code(code: &'static str) -> anyhow::Result<()> {
 }
 
 mod tests {
+    use std::collections::HashMap;
+
+    use crate::runtime::RuntimeVal;
+
     // Use outside scope
     use super::*;
 
@@ -49,5 +58,16 @@ mod tests {
         assert!(run_code("print 23;").is_ok());
         assert!(run_code("print 23 * 42 + 56;").is_ok());
         assert!(run_code("print (23 + 42) * 56;").is_ok());
+    }
+
+    #[test]
+    fn test_interp_var_decl() {
+        // Create parser
+        let parser = grammar::ProgramParser::new();
+        // Create interpreter that parses assign statement
+        let interp = Interpreter::new(parser.parse("let x = 23;").unwrap());
+
+        // Run interpreter
+        _ = interp.run().unwrap();
     }
 }
