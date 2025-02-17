@@ -6,7 +6,7 @@ pub enum Stmt {
     // An assignment
     Assign(AssignStmt),
     // An expression
-    Expr(Box<Expr>)
+    Expr(Box<Expr>),
 }
 
 /// A print statement.
@@ -50,6 +50,20 @@ pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub op: Op,
     pub rhs: Box<Expr>
+}
+
+/// Returns code with comments (lines starting with '//') processed out.
+pub fn filter_comments(code: &String) -> String {
+    let mut lines = Vec::new();
+
+    // Skips every line starting with "//"
+    for line in code.lines() {
+        if !line.starts_with("//") {
+            lines.push(line)
+        }
+    }
+
+    lines.join("\n")
 }
 
 #[cfg(test)]

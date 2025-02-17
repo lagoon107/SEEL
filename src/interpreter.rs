@@ -2,7 +2,7 @@
     Contains things related to the interpreter.
 */
 
-use crate::{grammar, parser::*, runtime::RuntimeEnv, visitor::{GeneralVisitor, Visitor}};
+use crate::{grammar, parser::{self, *}, runtime::RuntimeEnv, visitor::{GeneralVisitor, Visitor}};
 
 /// The interpreter that evaluates ast.
 #[derive(Clone, Debug, PartialEq)]
@@ -32,7 +32,7 @@ impl Interpreter {
 
 /// Takes code, parses that code to an ast, and runs the ast.
 pub fn run_code(code: &'static str) -> anyhow::Result<()> {
-    Interpreter::new(grammar::ProgramParser::new().parse(code)?).run()
+    Interpreter::new(grammar::ProgramParser::new().parse(parser::filter_comments(&code))?).run()
 }
 
 mod tests {
