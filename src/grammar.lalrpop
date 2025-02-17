@@ -36,7 +36,8 @@ Expr: Box<Expr> = {
         Expr::Binary(BinaryExpr { lhs: l, op: Op::Minus, rhs: r })
     ),
     Factor,
-    Str
+    Str,
+    Ident
 };
 
 /// A factor.

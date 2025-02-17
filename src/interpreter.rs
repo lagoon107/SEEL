@@ -58,6 +58,7 @@ mod tests {
         assert!(run_code("print 23;").is_ok());
         assert!(run_code("print 23 * 42 + 56;").is_ok());
         assert!(run_code("print (23 + 42) * 56;").is_ok());
+        _ = run_code("let x = 23; print x;").unwrap();
     }
 
     #[test]

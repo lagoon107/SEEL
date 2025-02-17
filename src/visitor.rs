@@ -1,7 +1,7 @@
 /*!
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
-use crate::{parser::{Expr, Op, Stmt}, runtime::{RuntimeEnv, RuntimeVal}};
+use crate::{parser::{Expr, Op, Stmt}, runtime::{self, RuntimeEnv, RuntimeVal}};
 
 /// Macros that `Visitor` trait uses.
 mod visitor_macros {
@@ -84,6 +84,20 @@ impl GeneralVisitor {
     }
 }
 
+/// Prints the value of a `RuntimeVal`.
+fn print_runtime_val(env: &RuntimeEnv, runtime_val: &RuntimeVal) {
+    // Print runtime value
+    match runtime_val {
+        RuntimeVal::Ident(name) => {
+            // Call function recursively to print value of ident
+            print_runtime_val(env,&env.get_var(&name).unwrap())
+        },
+        RuntimeVal::Str(s) => println!("{}", s),
+        RuntimeVal::Num(n) => println!("{}", n),
+        RuntimeVal::Null => println!("null")
+    };
+}
+
 impl Visitor for GeneralVisitor {
     type Target = anyhow::Result<RuntimeVal>;
     
@@ -111,11 +125,7 @@ impl Visitor for GeneralVisitor {
             let runtime_assign_value = self.visit_expr(&print_stmt.value)?;
             
             // Print runtime value
-            match runtime_assign_value {
-                RuntimeVal::Null => println!("null"),
-                RuntimeVal::Str(s) => println!("{}", s),
-                RuntimeVal::Num(n) => println!("{}", n)
-            };
+            print_runtime_val(&self.env, &runtime_assign_value);
 
             // Return null because it doesn't eval to anything
             return Ok(RuntimeVal::Null);
@@ -170,6 +180,13 @@ impl Visitor for GeneralVisitor {
     fn visit_num_expr(&self, expr: &Box<Expr>) -> Self::Target {
         with_extract_enum_variant!(**expr, Expr::Num(n), {
             return Ok(RuntimeVal::Num(n));
+        });
+    }
+
+    fn visit_ident_expr(&self, expr: &Box<Expr>) -> Self::Target {
+        with_extract_enum_variant!((**expr).clone(), Expr::Ident(i), {
+            // Return runtime type representing ident
+            return Ok(RuntimeVal::Ident(i.to_owned()));
         });
     }
 }
