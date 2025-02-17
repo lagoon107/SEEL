@@ -1,0 +1,13 @@
+[package]
+name = "SEEL"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+lalrpop = "0.22.1"
+anyhow = "1.0.95"
+
+[dependencies]
+anyhow = "1.0.95"
+lalrpop-util = { version = "0.22.1", features = ["lexer"] }
+thiserror = "2.0.11"

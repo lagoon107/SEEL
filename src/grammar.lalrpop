@@ -1,0 +1,80 @@
+use crate::parser::{Stmt, PrintStmt, AssignStmt, Expr, BinaryExpr, Op};
+
+grammar;
+
+/// A program consisting of many statements.
+pub Program: Vec<Stmt> = {
+    <s:(Stmt)+> => s
+}
+
+/// A statement.
+pub Stmt: Stmt = {
+    // A print statement
+    "print" <Expr> ";" => Stmt::Print(PrintStmt {
+        value: <>
+    }),
+
+    // An assignment statement
+    "let" <i:Ident> "=" <v:Expr> ";" => Stmt::Assign(AssignStmt {
+        name: match *i {
+            Expr::Ident(i) => i.to_string(),
+            _ => unimplemented!()
+        },
+        value: v
+    }),
+
+    // An expression
+    <Expr> => Stmt::Expr(<>)
+}
+
+/// An expression.
+Expr: Box<Expr> = {
+    <l:Expr> "+" <r:Factor> => Box::new(
+        Expr::Binary(BinaryExpr { lhs: l, op: Op::Plus, rhs: r })
+    ),
+    <l:Expr> "-" <r:Factor> => Box::new(
+        Expr::Binary(BinaryExpr { lhs: l, op: Op::Minus, rhs: r })
+    ),
+    Factor,
+    Str
+};
+
+/// A factor.
+Factor: Box<Expr> = {
+    <l:Factor> "*" <r:Term> => Box::new(
+        Expr::Binary(BinaryExpr { lhs: l, op: Op::Mult, rhs: r })
+    ),
+    <l:Factor> "/" <r:Term> => Box::new(
+        Expr::Binary(BinaryExpr { lhs: l, op: Op::Div, rhs: r })
+    ),
+    Term
+};
+
+/// A term.
+Term: Box<Expr> = {
+    Num,
+    "(" <Expr> ")"
+};
+
+/// An ident.
+pub Ident: Box<Expr> = r#"[a-z_A-Z]+"# => Box::new(
+    Expr::Ident(
+        <>
+        .to_string()
+        .replace("\"", "")
+    )
+);
+
+/// A numeric literal.
+Num: Box<Expr> = {
+    r"[0-9.]+" => Box::new(Expr::Num(<>.parse().expect("Couldn't parse number from str!")))
+};
+
+/// A string.
+pub Str: Box<Expr> = r#""([^"\\\x00-\x1F]|\\(["\\bnfrt/]|u[a-fA-F0-9]{4}))*""# => Box::new(
+    Expr::Str(
+        <>
+        .to_string()
+        .replace("\"", "")
+    )
+);
