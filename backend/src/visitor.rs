@@ -2,7 +2,7 @@
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
 use std::io::prelude::*;
-use frontend::{parser::{Expr, Op, Stmt}};
+use frontend::parser::{Expr, Op, Stmt};
 use crate::runtime::{RuntimeEnv, RuntimeVal};
 
 /// Macros that `Visitor` trait uses.
