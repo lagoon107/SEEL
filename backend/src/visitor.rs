@@ -1,6 +1,7 @@
 /*!
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
+use std::io::prelude::*;
 use frontend::{parser::{Expr, Op, Stmt}};
 use crate::runtime::{RuntimeEnv, RuntimeVal};
 
@@ -62,6 +63,7 @@ pub trait Visitor {
 
         // Expressions
         Box<Expr> => visit_expr,
+        Box<Expr> => visit_read_expr,
         Box<Expr> => visit_binary_expr,
         Box<Expr> => visit_num_expr,
         Box<Expr> => visit_str_expr,
@@ -145,11 +147,21 @@ impl Visitor for GeneralVisitor {
 
     fn visit_expr(&self, expr: &Box<Expr>) -> Self::Target {
         match **expr {
+            Expr::Read => self.visit_read_expr(expr),
             Expr::Binary(_) => self.visit_binary_expr(expr),
             Expr::Str(_) => self.visit_str_expr(expr),
             Expr::Num(_) => self.visit_num_expr(expr),
             Expr::Ident(_) => self.visit_ident_expr(expr)
         }
+    }
+
+    fn visit_read_expr(&self, _expr: &Box<Expr>) -> Self::Target {
+        // Get terminal input
+        let mut terminal_input = String::new();
+        _ = std::io::stdin().lock().read_line(&mut terminal_input)?;
+
+        // Return terminal input as runtime string
+        Ok(RuntimeVal::Str(terminal_input))
     }
 
     fn visit_str_expr(&self, expr: &Box<Expr>) -> Self::Target {

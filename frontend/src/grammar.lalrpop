@@ -29,6 +29,7 @@ pub Stmt: Stmt = {
 
 /// An expression.
 Expr: Box<Expr> = {
+    // Number expressions
     <l:Expr> "+" <r:Factor> => Box::new(
         Expr::Binary(BinaryExpr { lhs: l, op: Op::Plus, rhs: r })
     ),
@@ -36,6 +37,13 @@ Expr: Box<Expr> = {
         Expr::Binary(BinaryExpr { lhs: l, op: Op::Minus, rhs: r })
     ),
     Factor,
+
+    /// An expression that gathers input from terminal.
+    "read" => Box::new(
+        Expr::Read
+    ),
+
+    // Common types
     Str,
     Ident
 };

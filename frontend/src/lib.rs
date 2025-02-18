@@ -1,4 +1,4 @@
-// Add lalrpop parsed grammer file to project
+// Add lalrpop parsed file
 pub mod grammar;
 
 // Mod declarations

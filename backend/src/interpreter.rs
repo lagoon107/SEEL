@@ -34,20 +34,17 @@ impl Interpreter {
 
 /// Takes code, parses that code to an ast, and runs the ast.
 pub fn run_code(code: &str) -> anyhow::Result<()> {
-    Interpreter::new(grammar::ProgramParser::new().parse(
+    _ = Interpreter::new(grammar::ProgramParser::new().parse(
         unsafe { convert_string_to_static_str(code.to_string()) }
-    )?);
+    )?).run()?;
 
     // Return no errors
     Ok(())
 }
 
 mod tests {
-    use std::collections::HashMap;
-
-    use crate::runtime::RuntimeVal;
-
     // Use outside scope
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

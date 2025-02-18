@@ -38,6 +38,8 @@ pub enum Op {
 /// An expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
+    // A read expression.
+    Read,
     Binary(BinaryExpr),
     Num(f64),
     Str(String),
@@ -96,6 +98,14 @@ mod tests {
                 value: Box::new(Expr::Num(23.0))
             })
         ));
+    }
+
+    #[test]
+    fn test_parser_read() {
+        let code = "read";
+        let parser = grammar::StmtParser::new();
+
+        assert_eq!(parser.parse(code), Ok(Stmt::Expr(Box::new(Expr::Read))));
     }
 
     #[test]
