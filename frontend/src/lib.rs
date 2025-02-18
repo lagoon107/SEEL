@@ -1,5 +1,3 @@
-use lalrpop_util::lalrpop_mod;
-
 // Add lalrpop parsed grammer file to project
 pub mod grammar;
 

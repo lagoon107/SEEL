@@ -12,3 +12,8 @@ pub struct Args {
     /// File to parse.
     pub file: String
 }
+
+/// Returns parsed args.
+pub fn parse_args() -> Args {
+    Args::parse()
+}

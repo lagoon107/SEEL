@@ -6,6 +6,14 @@ edition = "2021"
 [lib]
 crate-type = ["dylib"]
 
+[profile.dev]
+incremental = true
+lto = false
+
+[profile.release]
+incremental = true
+lto = false
+
 [lints.rust]
 unused_unsafe = { level = "allow" }
 unsafe_op_in_unsafe_fn = { level = "deny" }
