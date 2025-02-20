@@ -1,10 +1,10 @@
-## Syntax
+# Syntax
 You can assign a variable name to a value by using the following syntax:  
 ```js
-let [name] = [value];
+[name] = [value];
 ```
 
-## Example
+# Example
 ```js
-let x = 10;
+x = 10;
 ```

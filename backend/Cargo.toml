@@ -16,4 +16,5 @@ lto = false
 
 [dependencies]
 anyhow = "1.0.95"
+libc = "0.2.169"
 frontend = { version = "0.1.0", path = "../frontend" }

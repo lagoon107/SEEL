@@ -35,7 +35,7 @@ impl Interpreter {
 /// Takes code, parses that code to an ast, and runs the ast.
 pub fn run_code(code: &str) -> anyhow::Result<()> {
     _ = Interpreter::new(grammar::ProgramParser::new().parse(
-        unsafe { convert_string_to_static_str(code.to_string()) }
+        unsafe { convert_string_to_static_str(filter_comments(code).to_string()) }
     )?).run()?;
 
     // Return no errors
@@ -52,6 +52,26 @@ mod tests {
         // Complete code file for interpreter to run
         let code = r#"
             print 23;
+        "#;
+
+        _ = run_code(code).unwrap();
+    }
+
+    #[test]
+    fn test_interp_bash_code() {
+        // Complete code file for interpreter to run
+        let code = r#"
+            '"echo Bash code test success!"';
+        "#;
+
+        _ = run_code(code).unwrap();
+    }
+
+    #[test]
+    fn test_interp_print_read() {
+        // Complete code file for interpreter to run
+        let code = r#"
+            print read;
         "#;
 
         _ = run_code(code).unwrap();

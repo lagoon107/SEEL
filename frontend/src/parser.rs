@@ -1,6 +1,8 @@
 /// A statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
+    // A statement that runs bash code
+    Bash(String),
     // A print statement
     Print(PrintStmt),
     // An assignment
@@ -38,7 +40,7 @@ pub enum Op {
 /// An expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    // A read expression.
+    // A read expression, with an optional prepended message.
     Read,
     Binary(BinaryExpr),
     Num(f64),
@@ -55,7 +57,7 @@ pub struct BinaryExpr {
 }
 
 /// Returns code with comments (lines starting with '//') processed out.
-pub fn filter_comments(code: &String) -> String {
+pub fn filter_comments(code: &str) -> String {
     let mut lines = Vec::new();
 
     // Skips every line starting with "//"
@@ -75,6 +77,36 @@ mod tests {
     use crate::grammar;
 
     #[test]
+    fn test_parser_bash_code() {
+        let code = r#"'"echo Hello"';"#;
+        let parser = grammar::StmtParser::new();
+
+        assert_eq!(
+            parser.parse(code).unwrap(),
+            Stmt::Bash("echo Hello".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parser_postfix_question_print() {
+        let code = "1 + 2?";
+        let parser = grammar::StmtParser::new();
+
+        assert_eq!(
+            parser.parse(code).unwrap(),
+            Stmt::Print(PrintStmt {
+                value: Box::new(
+                    Expr::Binary(BinaryExpr {
+                        lhs: Box::new(Expr::Num(1.0)),
+                        op: Op::Plus,
+                        rhs: Box::new(Expr::Num(2.0))
+                    })
+                )
+            })
+         );
+    }
+
+    #[test]
     fn test_parser_print() {
         let code = r#"print "Hello, world!";"#;
         let parser = grammar::StmtParser::new();
@@ -89,7 +121,7 @@ mod tests {
 
     #[test]
     fn test_parser_assign() {
-        let code = "let x = 23;";
+        let code = "x = 23;";
         let parser = grammar::StmtParser::new();
 
         assert_eq!(parser.parse(code), Ok(

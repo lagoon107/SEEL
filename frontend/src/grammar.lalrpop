@@ -9,13 +9,20 @@ pub Program: Vec<Stmt> = {
 
 /// A statement.
 pub Stmt: Stmt = {
+    "'" <PlainStr> "'" StmtDelim => Stmt::Bash(<>),
+
+    /// A postfix operator statement that indicates an expression should be printed to console.
+    <Expr> "?" => Stmt::Print(PrintStmt {
+        value: <>
+    }),
+
     // A print statement
-    "print" <Expr> ";" => Stmt::Print(PrintStmt {
+    "print" <Expr> StmtDelim => Stmt::Print(PrintStmt {
         value: <>
     }),
 
     // An assignment statement
-    "let" <i:Ident> "=" <v:Expr> ";" => Stmt::Assign(AssignStmt {
+    <i:Ident> "=" <v:Expr> StmtDelim => Stmt::Assign(AssignStmt {
         name: match *i {
             Expr::Ident(i) => i.to_string(),
             _ => unimplemented!()
@@ -27,8 +34,16 @@ pub Stmt: Stmt = {
     <Expr> => Stmt::Expr(<>)
 }
 
+/// Stmt Delimiter.
+pub StmtDelim = ";";
+
 /// An expression.
 Expr: Box<Expr> = {
+    /// An expression that gathers input from terminal, with an optional message prepended.
+    "read" => Box::new(
+        Expr::Read
+    ),
+
     // Number expressions
     <l:Expr> "+" <r:Factor> => Box::new(
         Expr::Binary(BinaryExpr { lhs: l, op: Op::Plus, rhs: r })
@@ -37,11 +52,6 @@ Expr: Box<Expr> = {
         Expr::Binary(BinaryExpr { lhs: l, op: Op::Minus, rhs: r })
     ),
     Factor,
-
-    /// An expression that gathers input from terminal.
-    "read" => Box::new(
-        Expr::Read
-    ),
 
     // Common types
     Str,
@@ -87,3 +97,7 @@ pub Str: Box<Expr> = r#""([^"\\\x00-\x1F]|\\(["\\bnfrt/]|u[a-fA-F0-9]{4}))*""# =
         .replace("\"", "")
     )
 );
+
+/// A plain non-expr string that returns `String`.
+pub PlainStr: String = r#""([^"\\\x00-\x1F]|\\(["\\bnfrt/]|u[a-fA-F0-9]{4}))*""# => 
+    String::from(<>).replace("\"", "");

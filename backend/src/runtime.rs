@@ -18,25 +18,25 @@ pub enum RuntimeVal {
 pub struct RuntimeEnv {
     /// The optional parent of this environment
     pub parent: Option<Box<RuntimeEnv>>,
-    /// The variables in an environment, each containing a runtime value.
-    pub vars: RefCell<HashMap<String, RuntimeVal>>
+    /// The symbols in an environment, each containing a runtime value.
+    pub symbols: RefCell<HashMap<String, RuntimeVal>>
 }
 
 impl RuntimeEnv {
-    /// Constructs a new runtime environment with an optional parent and vars.
-    pub fn new(parent: Option<Box<RuntimeEnv>>, vars: RefCell<HashMap<String, RuntimeVal>>) -> Self {
-        Self { parent, vars }
+    /// Constructs a new runtime environment with an optional parent and symbols.
+    pub fn new(parent: Option<Box<RuntimeEnv>>, symbols: RefCell<HashMap<String, RuntimeVal>>) -> Self {
+        Self { parent, symbols }
     }
 
     /// Constructs a new runtime environment with a parent and no vars.
     pub fn create_with_parent(parent: Box<RuntimeEnv>) -> Self {
-        Self { parent: Some(parent), vars: RefCell::default() }
+        Self { parent: Some(parent), symbols: RefCell::default() }
     }
 
     /// Returns the value of a variable with `name`.
     pub fn get_var(&self, name: &str) -> Option<RuntimeVal> {
         if self.parent.is_none() {
-            self.vars.borrow().get(name).and_then(|s| Some((*s).clone()))
+            self.symbols.borrow().get(name).and_then(|s| Some((*s).clone()))
         } else {
             panic!("Getting variable from parent env is not yet implemented!")
         }
@@ -44,6 +44,6 @@ impl RuntimeEnv {
     
     /// Returns true if a var with `name` exists in this env.
     pub fn var_exists(&self, name: &str) -> bool {
-        self.vars.borrow().contains_key(name)
+        self.symbols.borrow().contains_key(name)
     }
 }

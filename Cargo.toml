@@ -18,7 +18,7 @@ lto = false
 
 [build-dependencies]
 lalrpop = "0.22.1"
-anyhow = "1.0.95"
+anyhow = "1.0.96"
 
 [dependencies]
 anyhow = "1.0.95"

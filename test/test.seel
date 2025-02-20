@@ -1,2 +1,8 @@
-let x = 10;
-print x;
+// Get user input
+input = read;
+
+// Print gathered input
+print input;
+
+// Run simple bash code
+'"PAUSE"';

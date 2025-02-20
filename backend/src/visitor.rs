@@ -1,7 +1,7 @@
 /*!
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
-use std::io::prelude::*;
+use std::{ffi::CString, io::prelude::*};
 use frontend::parser::{Expr, Op, Stmt};
 use crate::runtime::{RuntimeEnv, RuntimeVal};
 
@@ -60,6 +60,7 @@ pub trait Visitor {
         Stmt => visit_stmt,
         Stmt => visit_stmt_print,
         Stmt => visit_stmt_assign,
+        Stmt => visit_bash_code_stmt,
 
         // Expressions
         Box<Expr> => visit_expr,
@@ -116,10 +117,21 @@ impl Visitor for GeneralVisitor {
 
     fn visit_stmt(&self, stmt: &Stmt) -> Self::Target {
         match stmt {
+            Stmt::Bash(_) => self.visit_bash_code_stmt(stmt),
             Stmt::Print(_) => self.visit_stmt_print(stmt),
             Stmt::Assign(_) => self.visit_stmt_assign(stmt),
             Stmt::Expr(e) => self.visit_expr(e),
         }
+    }
+
+    fn visit_bash_code_stmt(&self, stmt: &Stmt) -> Self::Target {
+        with_extract_enum_variant!(stmt, Stmt::Bash(code), {
+            // Call system() func from libc
+            unsafe { libc::system(CString::new(code.as_bytes())?.as_ptr()) }
+        });
+        
+        // Return null because this is a statement
+        Ok(RuntimeVal::Null)
     }
 
     fn visit_stmt_print(&self, stmt: &Stmt) -> Self::Target {
@@ -138,7 +150,7 @@ impl Visitor for GeneralVisitor {
     fn visit_stmt_assign(&self, stmt: &Stmt) -> Self::Target {
         with_extract_enum_variant!(stmt, Stmt::Assign(a), {
             // Insert var into runtime environment
-            self.env.vars.borrow_mut().insert(a.name.clone(), self.visit_expr(&a.value)?);
+            self.env.symbols.borrow_mut().insert(a.name.clone(), self.visit_expr(&a.value)?);
         });
 
         // Return null because this doesn't eval to anything
