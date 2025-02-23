@@ -59,8 +59,26 @@ mod tests {
 
     #[test]
     fn test_interp_if() {
-        let code = "if 32 < 23 { print 23; }";
-        
+        let mut code = "if 32 < 23 { print 23; }";
+        run_code(code).unwrap();
+
+        code = r#"if "yahoo" == "yahoo" { print "Yay!"; }"#;
+        run_code(code).unwrap();
+
+        code = r#"if true == true { print "True!"; }"#;
+        run_code(code).unwrap();
+
+        code = r#"let x = 23; if x == 23 { print "Yay!"; }"#;
+        run_code(code).unwrap();
+
+        code = r#"let x = "Hello"; if x == "Hello" { print "Yay!"; }"#;
+        run_code(code).unwrap();
+    }
+
+    #[test]
+    fn test_interp_bool() {
+        let code = "x = true;";
+
         run_code(code).unwrap();
     }
 

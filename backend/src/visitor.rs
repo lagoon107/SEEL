@@ -2,6 +2,7 @@
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
 use std::{ffi::CString, io::prelude::*};
+use anyhow::anyhow;
 use frontend::parser::{CompareOp, Expr, Op, Stmt};
 use crate::runtime::{RuntimeEnv, RuntimeVal};
 
@@ -67,6 +68,7 @@ pub trait Visitor {
         Box<Expr> => visit_compare_expr,
         Box<Expr> => visit_read_expr,
         Box<Expr> => visit_binary_expr,
+        Box<Expr> => visit_bool_expr,
         Box<Expr> => visit_num_expr,
         Box<Expr> => visit_str_expr,
         Box<Expr> => visit_ident_expr
@@ -102,6 +104,57 @@ fn print_runtime_val(env: &RuntimeEnv, runtime_val: &RuntimeVal) {
         RuntimeVal::Num(n) => println!("{}", n),
         RuntimeVal::Null => println!("null")
     };
+}
+
+/// Returns the result of an equality equation (eg. "2 == 2").
+fn get_equality(env: &Box<RuntimeEnv>, lhs: RuntimeVal, op: CompareOp, rhs: RuntimeVal) -> anyhow::Result<bool> {
+    Ok(match lhs {
+        RuntimeVal::Ident(var) => {
+            // Get value of var with name `var`
+            let var_eval = match env.get_var(var.as_str()) {
+                Some(var_value) => var_value,
+                None => return Err(anyhow!("Cannot get value of var '{var}'"))
+            };
+
+            // Return equality between new taken var value and rhs
+            get_equality(env, var_eval, op, rhs)?
+        }
+        RuntimeVal::Bool(lbool) => {
+            // Can only compare between bool and bool
+            with_extract_enum_variant!(rhs, RuntimeVal::Bool(rbool), {
+                match op {
+                    CompareOp::Equal => lbool == rbool,
+                    CompareOp::NEqual => lbool != rbool,
+                    _ => return Err(anyhow!("only == and != supported between two bool values"))
+                }
+            })
+        }
+        RuntimeVal::Num(lnum) => {
+            // Can only compare between num and num
+            with_extract_enum_variant!(rhs, RuntimeVal::Num(rnum), {
+                match op {
+                    CompareOp::Equal => lnum == rnum,
+                    CompareOp::NEqual => lnum != rnum,
+                    CompareOp::Greater => lnum > rnum,
+                    CompareOp::GreaterEqual => lnum >= rnum,
+                    CompareOp::Less => lnum < rnum,
+                    CompareOp::LessEqual => lnum <= rnum
+                }
+            })
+        }
+        RuntimeVal::Str(lstr) => {
+            // Can only compare between str and str
+            with_extract_enum_variant!(rhs, RuntimeVal::Str(rstr), {
+                match op {
+                    CompareOp::Equal => lstr == rstr,
+                    CompareOp::NEqual => lstr != rstr,
+                    _ => return Err(anyhow!("only == and != supported between two string values"))
+                }
+            })
+        }
+        _ => return Err(anyhow!("only bool, num, and str supported in if condition"))
+        }
+    )
 }
 
 impl Visitor for GeneralVisitor {
@@ -190,6 +243,7 @@ impl Visitor for GeneralVisitor {
             Expr::Read => self.visit_read_expr(expr),
             Expr::Binary(_) => self.visit_binary_expr(expr),
             Expr::Comparison { .. } => self.visit_compare_expr(expr),
+            Expr::Bool(_) => self.visit_bool_expr(expr),
             Expr::Str(_) => self.visit_str_expr(expr),
             Expr::Num(_) => self.visit_num_expr(expr),
             Expr::Ident(_) => self.visit_ident_expr(expr)
@@ -197,46 +251,12 @@ impl Visitor for GeneralVisitor {
     }
 
     fn visit_compare_expr(&self, expr: &Box<Expr>) -> Self::Target {
-        with_extract_enum_variant!((**expr).clone(), Expr::Comparison {lhs, op, rhs}, {
+        Ok(with_extract_enum_variant!((**expr).clone(), Expr::Comparison {lhs, op, rhs}, {
             let eval_lhs = self.visit_expr(&lhs)?;
             let eval_rhs = self.visit_expr(&rhs)?;
 
-            match &op {
-                &CompareOp::Equal => return Ok(RuntimeVal::Bool(eval_lhs == eval_rhs)),
-                &CompareOp::Greater => {
-                    // Only works if lhs and rhs are numbers
-                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
-                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
-                            return Ok(RuntimeVal::Bool(ln > rn))
-                        });
-                    });
-                },
-                &CompareOp::GreaterEqual => {
-                    // Only works if lhs and rhs are numbers
-                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
-                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
-                            return Ok(RuntimeVal::Bool(ln >= rn))
-                        });
-                    });
-                },
-                &CompareOp::Less => {
-                    // Only works if lhs and rhs are numbers
-                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
-                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
-                            return Ok(RuntimeVal::Bool(ln < rn))
-                        });
-                    });
-                },
-                &CompareOp::LessEqual => {
-                    // Only works if lhs and rhs are numbers
-                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
-                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
-                            return Ok(RuntimeVal::Bool(ln <= rn))
-                        });
-                    });
-                }
-            };
-        });
+            RuntimeVal::Bool(get_equality(&self.env, eval_lhs, op, eval_rhs)?)
+        }))
     }
 
     fn visit_read_expr(&self, _expr: &Box<Expr>) -> Self::Target {
@@ -246,6 +266,12 @@ impl Visitor for GeneralVisitor {
 
         // Return terminal input as runtime string
         Ok(RuntimeVal::Str(terminal_input))
+    }
+
+    fn visit_bool_expr(&self, expr: &Box<Expr>) -> Self::Target {
+        with_extract_enum_variant!(**expr, Expr::Bool(b), {
+            Ok(RuntimeVal::Bool(b))
+        })
     }
 
     fn visit_str_expr(&self, expr: &Box<Expr>) -> Self::Target {

@@ -54,11 +54,15 @@ CodeBlock: Stmt = "{" <p:Program> "}" => Stmt::Block(p);
 StmtDelim = ";";
 
 /// An expression.
-Expr: Box<Expr> = {
+pub Expr: Box<Expr> = {
     /// An expression that gathers input from terminal, with an optional message prepended.
     "read" => Box::new(
         Expr::Read
     ),
+
+    // Bool stuff
+    "true" => Box::new(Expr::Bool(true)),
+    "false" => Box::new(Expr::Bool(false)),
 
     // Number expressions
     <l:Expr> "+" <r:Factor> => Box::new(
@@ -87,6 +91,7 @@ pub Comparison: Box<Expr> = <l:Expr> <cop:CompareOp> <r:Expr> => Box::new(
 CompareOp: CompareOp = {
     ">" => CompareOp::Greater,
     "<" => CompareOp::Less,
+    "!=" => CompareOp::NEqual,
     "==" => CompareOp::Equal,
     ">=" => CompareOp::GreaterEqual,
     "<=" => CompareOp::LessEqual,

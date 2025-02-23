@@ -4,7 +4,7 @@ input = read;
 // Print gathered input
 print input;
 
-// Print gathered input if it is "yahoo"
+// Print message if input is "yahoo"
 if input == "yahoo" {
     print "Input is yahoo!";
 }

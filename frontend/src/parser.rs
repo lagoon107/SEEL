@@ -48,6 +48,7 @@ pub enum Op {
 pub enum CompareOp {
     Greater,
     Less,
+    NEqual,
     Equal,
     GreaterEqual,
     LessEqual,
@@ -58,6 +59,9 @@ pub enum CompareOp {
 pub enum Expr {
     // A read expression, with an optional prepended message.
     Read,
+
+    // Bools
+    Bool(bool),
 
     /// A comparison expression.
     Comparison {
@@ -117,6 +121,19 @@ mod tests {
         });
     }
     
+    #[test]
+    fn test_parser_bool() {
+        let parser = grammar::ExprParser::new();
+
+        // Test true boolean
+        let mut code = "true";
+        assert_eq!(parser.parse(code).unwrap(), Box::new(Expr::Bool(true)));
+
+        // Test false boolean
+        code = "false";
+        assert_eq!(parser.parse(code).unwrap(), Box::new(Expr::Bool(false)));
+    }
+
     #[test]
     fn test_parser_code_block() {
         let code = "{ print 23; }";
