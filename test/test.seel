@@ -4,5 +4,10 @@ input = read;
 // Print gathered input
 print input;
 
+// Print gathered input if it is "yahoo"
+if input == "yahoo" {
+    print "Input is yahoo!";
+}
+
 // Run simple bash code
 '"PAUSE"';

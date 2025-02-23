@@ -1,6 +1,12 @@
 /// A statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
+    /// An if statement.
+    If { comparison: Box<Expr>, code: Vec<Stmt> },
+
+    /// A code block
+    Block(Vec<Stmt>),
+
     // A statement that runs bash code
     Bash(String),
     // A print statement
@@ -37,13 +43,33 @@ pub enum Op {
     Div
 }
 
+/// A comparison operator (eg. '>', '<').
+#[derive(Clone, Debug, PartialEq)]
+pub enum CompareOp {
+    Greater,
+    Less,
+    Equal,
+    GreaterEqual,
+    LessEqual,
+}
+
 /// An expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     // A read expression, with an optional prepended message.
     Read,
+
+    /// A comparison expression.
+    Comparison {
+        lhs: Box<Expr>,
+        op: CompareOp,
+        rhs: Box<Expr>
+    },
+
+    // Number expressions
     Binary(BinaryExpr),
     Num(f64),
+
     Str(String),
     // An identifier
     Ident(String)
@@ -75,6 +101,57 @@ mod tests {
     // Use stuff
     use super::*;
     use crate::grammar;
+
+    #[test]
+    fn test_parser_if() {
+        let code = "if 12 < 23 { print 23; }";
+        let parser = grammar::StmtParser::new();
+
+        assert_eq!(parser.parse(code).unwrap(), Stmt::If {
+            comparison: Box::new(Expr::Comparison {
+                lhs: Box::new(Expr::Num(12.0)),
+                op: CompareOp::Less,
+                rhs: Box::new(Expr::Num(23.0))
+            }),
+            code: vec![Stmt::Print(PrintStmt { value: Box::new(Expr::Num(23.0)) })]
+        });
+    }
+    
+    #[test]
+    fn test_parser_code_block() {
+        let code = "{ print 23; }";
+        let parser = grammar::StmtParser::new();
+
+        assert_eq!(parser.parse(code).unwrap(), Stmt::Block(
+            vec![Stmt::Print(PrintStmt { value: Box::new(Expr::Num(23.0)) })]
+        ));
+    }
+
+    #[test]
+    fn test_parser_comparison() {
+        let code = "2 + 2 > 3 * 2";
+        let parser = grammar::ComparisonParser::new();
+
+        if let Expr::Comparison { .. } = *parser.parse(code).unwrap() {
+
+        } else {
+            panic!("Comparison should result from ComparisonParser!");
+        }
+
+        assert_eq!(*parser.parse(code).unwrap(), Expr::Comparison {
+            lhs: Box::new(Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Num(2.0)),
+                op: Op::Plus,
+                rhs: Box::new(Expr::Num(2.0))
+            })),
+            op: CompareOp::Greater,
+            rhs: Box::new(Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Num(3.0)),
+                op: Op::Mult,
+                rhs: Box::new(Expr::Num(2.0))
+            }))
+        });
+    }
 
     #[test]
     fn test_parser_bash_code() {

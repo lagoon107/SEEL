@@ -10,6 +10,7 @@ pub enum RuntimeVal {
     Ident(String),
     Str(String),
     Num(f64),
+    Bool(bool),
     Null
 }
 

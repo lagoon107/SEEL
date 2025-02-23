@@ -1,4 +1,4 @@
-use crate::parser::{Stmt, PrintStmt, AssignStmt, Expr, BinaryExpr, Op};
+use crate::parser::{Stmt, PrintStmt, AssignStmt, Expr, CompareOp, BinaryExpr, Op};
 
 grammar;
 
@@ -9,6 +9,19 @@ pub Program: Vec<Stmt> = {
 
 /// A statement.
 pub Stmt: Stmt = {
+    /// An if statement.
+    "if" <cond:Comparison> <c:CodeBlock> => Stmt::If {
+        comparison: cond,
+        code: match c {
+            Stmt::Block(v) => v,
+            _ => panic!("Code Block must follow if statement!")
+        }
+    },
+
+    /// A code block.
+    <CodeBlock> => <>,
+
+    /// A statement that executes terminal code directly.
     "'" <PlainStr> "'" StmtDelim => Stmt::Bash(<>),
 
     /// A postfix operator statement that indicates an expression should be printed to console.
@@ -34,8 +47,11 @@ pub Stmt: Stmt = {
     <Expr> => Stmt::Expr(<>)
 }
 
+/// A code block.
+CodeBlock: Stmt = "{" <p:Program> "}" => Stmt::Block(p);
+
 /// Stmt Delimiter.
-pub StmtDelim = ";";
+StmtDelim = ";";
 
 /// An expression.
 Expr: Box<Expr> = {
@@ -56,6 +72,24 @@ Expr: Box<Expr> = {
     // Common types
     Str,
     Ident
+};
+
+/// Equality condition.
+pub Comparison: Box<Expr> = <l:Expr> <cop:CompareOp> <r:Expr> => Box::new(
+    Expr::Comparison {
+        lhs: l,
+        op: cop,
+        rhs: r
+    }
+);
+
+/// An equality operator
+CompareOp: CompareOp = {
+    ">" => CompareOp::Greater,
+    "<" => CompareOp::Less,
+    "==" => CompareOp::Equal,
+    ">=" => CompareOp::GreaterEqual,
+    "<=" => CompareOp::LessEqual,
 };
 
 /// A factor.

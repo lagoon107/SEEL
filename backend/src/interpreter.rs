@@ -58,6 +58,13 @@ mod tests {
     }
 
     #[test]
+    fn test_interp_if() {
+        let code = "if 32 < 23 { print 23; }";
+        
+        run_code(code).unwrap();
+    }
+
+    #[test]
     fn test_interp_bash_code() {
         // Complete code file for interpreter to run
         let code = r#"

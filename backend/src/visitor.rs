@@ -2,7 +2,7 @@
     Contains `Visitor` trait and structs that implement `Visitor` trait.
 */
 use std::{ffi::CString, io::prelude::*};
-use frontend::parser::{Expr, Op, Stmt};
+use frontend::parser::{CompareOp, Expr, Op, Stmt};
 use crate::runtime::{RuntimeEnv, RuntimeVal};
 
 /// Macros that `Visitor` trait uses.
@@ -35,9 +35,7 @@ mod visitor_macros {
             if let $variant = $enum {
                 $code
             } else {
-                // Return anyhow error out of enclosing function
-                use anyhow::anyhow;
-                return Err(anyhow!("Incorrect type requested for enum extraction!"));
+                return Err(anyhow::anyhow!("Incorrect type requested for enum extraction!"));
             }
         }
     }
@@ -58,12 +56,15 @@ pub trait Visitor {
 
         // Statements
         Stmt => visit_stmt,
+        Stmt => visit_stmt_if,
+        Stmt => visit_stmt_block,
         Stmt => visit_stmt_print,
         Stmt => visit_stmt_assign,
         Stmt => visit_bash_code_stmt,
 
         // Expressions
         Box<Expr> => visit_expr,
+        Box<Expr> => visit_compare_expr,
         Box<Expr> => visit_read_expr,
         Box<Expr> => visit_binary_expr,
         Box<Expr> => visit_num_expr,
@@ -96,6 +97,7 @@ fn print_runtime_val(env: &RuntimeEnv, runtime_val: &RuntimeVal) {
             // Call function recursively to print value of ident
             print_runtime_val(env,&env.get_var(&name).unwrap())
         },
+        RuntimeVal::Bool(b) => println!("{}", b),
         RuntimeVal::Str(s) => println!("{}", s),
         RuntimeVal::Num(n) => println!("{}", n),
         RuntimeVal::Null => println!("null")
@@ -118,10 +120,36 @@ impl Visitor for GeneralVisitor {
     fn visit_stmt(&self, stmt: &Stmt) -> Self::Target {
         match stmt {
             Stmt::Bash(_) => self.visit_bash_code_stmt(stmt),
+            Stmt::If { .. } => self.visit_stmt_if(stmt),
+            Stmt::Block(_) => self.visit_stmt_block(stmt),
             Stmt::Print(_) => self.visit_stmt_print(stmt),
             Stmt::Assign(_) => self.visit_stmt_assign(stmt),
             Stmt::Expr(e) => self.visit_expr(e),
         }
+    }
+
+    fn visit_stmt_if(&self, stmt: &Stmt) -> Self::Target {
+        // The given code is run if the comparison bool value is true
+        with_extract_enum_variant!((*stmt).clone(), Stmt::If { comparison, code }, {
+            with_extract_enum_variant!(self.visit_compare_expr(&comparison)?, RuntimeVal::Bool(b), {
+                if b == true {
+                    self.visit_stmt_block(&Stmt::Block(code))?;
+                }
+            });
+        });
+
+        // Return null because this is a statement
+        Ok(RuntimeVal::Null)
+    }
+
+    fn visit_stmt_block(&self, stmt: &Stmt) -> Self::Target {
+        // Run all the code in the block
+        with_extract_enum_variant!(stmt, Stmt::Block(statements), {
+            self.visit_program(statements)?;
+        });
+
+        // Return null because this is a statement
+        Ok(RuntimeVal::Null)
     }
 
     fn visit_bash_code_stmt(&self, stmt: &Stmt) -> Self::Target {
@@ -161,10 +189,54 @@ impl Visitor for GeneralVisitor {
         match **expr {
             Expr::Read => self.visit_read_expr(expr),
             Expr::Binary(_) => self.visit_binary_expr(expr),
+            Expr::Comparison { .. } => self.visit_compare_expr(expr),
             Expr::Str(_) => self.visit_str_expr(expr),
             Expr::Num(_) => self.visit_num_expr(expr),
             Expr::Ident(_) => self.visit_ident_expr(expr)
         }
+    }
+
+    fn visit_compare_expr(&self, expr: &Box<Expr>) -> Self::Target {
+        with_extract_enum_variant!((**expr).clone(), Expr::Comparison {lhs, op, rhs}, {
+            let eval_lhs = self.visit_expr(&lhs)?;
+            let eval_rhs = self.visit_expr(&rhs)?;
+
+            match &op {
+                &CompareOp::Equal => return Ok(RuntimeVal::Bool(eval_lhs == eval_rhs)),
+                &CompareOp::Greater => {
+                    // Only works if lhs and rhs are numbers
+                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
+                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
+                            return Ok(RuntimeVal::Bool(ln > rn))
+                        });
+                    });
+                },
+                &CompareOp::GreaterEqual => {
+                    // Only works if lhs and rhs are numbers
+                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
+                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
+                            return Ok(RuntimeVal::Bool(ln >= rn))
+                        });
+                    });
+                },
+                &CompareOp::Less => {
+                    // Only works if lhs and rhs are numbers
+                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
+                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
+                            return Ok(RuntimeVal::Bool(ln < rn))
+                        });
+                    });
+                },
+                &CompareOp::LessEqual => {
+                    // Only works if lhs and rhs are numbers
+                    with_extract_enum_variant!(eval_lhs, RuntimeVal::Num(ln), {
+                        with_extract_enum_variant!(eval_rhs, RuntimeVal::Num(rn), {
+                            return Ok(RuntimeVal::Bool(ln <= rn))
+                        });
+                    });
+                }
+            };
+        });
     }
 
     fn visit_read_expr(&self, _expr: &Box<Expr>) -> Self::Target {
