@@ -1,5 +1,5 @@
 # Syntax
-You can run code conditionally using this syntax
+You can run code conditionally using this syntax:
 ```js
 if [expr] == [expr] { [statements] }
 ```
