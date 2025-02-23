@@ -4,6 +4,7 @@ input = read;
 // Print gathered input
 print input;
 
+/////// THIS IF STATEMENT DOES NOT WORK FOR WHATEVER REASON!
 // Print message if input is "yahoo"
 if input == "yahoo" {
     print "Input is yahoo!";
