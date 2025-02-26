@@ -57,7 +57,7 @@ pub enum CompareOp {
 /// An expression.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
-    // A read expression, with an optional prepended message.
+    /// An expression that reads terminal input.
     Read,
 
     // Bools
