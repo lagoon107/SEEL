@@ -15,6 +15,8 @@ pub trait Writer {
     gen_writer_fn!{
         // Statements
         &CStmt => write_stmt,
+        &CFnDef => write_stmt_fndef,
+        &CExpr => write_stmt_return,
         &Vec<CStmt> => write_stmt_block,
         &CStmt => write_stmt_if,
         &CAssignStmt => write_stmt_assign,
@@ -67,14 +69,38 @@ impl CWriter {
         Self::default()
     }
 
+    /// Returns code, that contains items that are essential for every SEEL program.
+    fn custom_std() -> &'static str {
+        "
+        /// Simply prints something to the screen.
+        #define PRINT(item) std::cout << (item) << std::endl;
+
+        /// Returns terminal input (stdin).
+        std::string read() {
+            std::string input;
+            getline(std::cin, input);
+
+            return input;
+        }
+        "
+    }
+
     /// Returns code, combined with essential code that must be placed before & after.
     fn combine_code(code: String) -> String {
         format!(
             "
+            #include <iostream>
+            #include <string>
+            #include <stdio.h>
+            #include <stdlib.h>
+
+            {custom_std}
+
             int main() {{
                 {code}
             }}
-            "
+            ",
+            custom_std = Self::custom_std()
         )
     }
 
@@ -90,11 +116,61 @@ impl CWriter {
 impl Writer for CWriter {
     fn write_stmt(&self, stmt: &CStmt) -> anyhow::Result<()> {
         match stmt {
+            CStmt::FnDef(f) => self.write_stmt_fndef(f),
+            CStmt::Return(val) => self.write_stmt_return(val),
             CStmt::Block(b) => self.write_stmt_block(b),
             CStmt::If { .. } => self.write_stmt_if(stmt),
             CStmt::Assign(c) => self.write_stmt_assign(c),
             CStmt::Expr(e) => self.write_expr(e)
         }
+    }
+
+    fn write_stmt_fndef(&self, stmt: &CFnDef) -> anyhow::Result<()> {
+        // Write return type
+        self.code.borrow_mut().write("auto ");
+        // Write function identifier
+        self.write_expr_ident(&stmt.name)?;
+        self.write_expr_ident("=")?;
+
+        // Write opening of param list
+        self.code.borrow_mut().write("[]");
+        self.code.borrow_mut().write("(");
+
+        // Write function params
+        let mut i = 1;
+        for param in stmt.params.iter() {
+            // Write param type
+            self.write_expr_ident(format!("{} ", param.0).as_str())?;
+            // Write param name
+            self.write_expr_ident(&param.1)?;
+
+            // Add comma if not at end of params list
+            if i != stmt.params.len() {
+                self.code.borrow_mut().write(", ");
+            }
+
+            i += 1;
+        }
+
+        // Write closing paren of param list
+        self.code.borrow_mut().write(")");
+
+        // Write body
+        self.write_stmt_block(&stmt.code)?;
+
+        Ok(())
+    }
+
+    fn write_stmt_return(&self, value: &CExpr) -> anyhow::Result<()> {
+        self.code.borrow_mut().write("return ");
+
+        // Write expr
+        self.write_expr(value)?;
+
+        // Write semicolon
+        self.code.borrow_mut().write(";");
+
+        Ok(())
     }
 
     fn write_stmt_block(&self, block: &Vec<CStmt>) -> anyhow::Result<()> {
@@ -164,8 +240,16 @@ impl Writer for CWriter {
         self.code.borrow_mut().write("(");
         
         // Write function args
+        let mut i = 1;
         for arg in cfncall.args.iter() {
             self.write_expr(arg)?;
+
+            // Add commas between args correctly
+            if i != cfncall.args.len() {
+                self.code.borrow_mut().write(", ");
+            }
+
+            i += 1;
         }
 
         // Write function closing paren

@@ -1,6 +1,11 @@
 /// A C lang statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum CStmt {
+    /// A fn def.
+    FnDef(CFnDef),
+    /// A fn return.
+    Return(Box<CExpr>),
+
     /// An if statement.
     If { comparison: CComparison, code: Vec<CStmt> },
 
@@ -10,6 +15,15 @@ pub enum CStmt {
     Assign(CAssignStmt),
     // An expression
     Expr(Box<CExpr>),
+}
+
+/// A C fn def.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CFnDef {
+    pub name: String,
+    /// A list of params with a type and name (eg. "auto x").
+    pub params: Vec<(String, String)>,
+    pub code: Vec<CStmt>
 }
 
 /// An C assignment statement.

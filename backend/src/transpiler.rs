@@ -45,6 +45,8 @@ impl<'a> Transpiler<'a> {
 
     pub fn transpile_stmt(&self, stmt: &Stmt) -> CStmtRes {
         Ok(match stmt {
+            Stmt::FnDef(f) => self.transpile_stmt_fndef(f)?,
+            Stmt::Return(val) => self.transpile_stmt_return(val)?,
             Stmt::Bash(b) => self.transpile_stmt_bash(b.to_owned())?,
             Stmt::If { comparison, code } => self.transpile_stmt_if(comparison, code)?,
             Stmt::Print(p) => self.transpile_stmt_print(p)?,
@@ -52,6 +54,18 @@ impl<'a> Transpiler<'a> {
             Stmt::Assign(a) => self.transpile_stmt_assign(a)?,
             Stmt::Expr(e) => CStmt::Expr(self.transpile_expr(e)?),
         })
+    }
+
+    pub fn transpile_stmt_return(&self, value: &Expr) -> CStmtRes {
+        Ok(CStmt::Return(self.transpile_expr(value)?))
+    }
+
+    pub fn transpile_stmt_fndef(&self, fndef: &FnDef) -> CStmtRes {
+        Ok(CStmt::FnDef(CFnDef {
+            name: fndef.name.to_owned(),
+            params: fndef.params.to_owned().into_iter().map(|i| ("auto".to_string(), i)).collect(),
+            code: self.transpile_program(&fndef.code)?
+        }))
     }
 
     pub fn transpile_stmt_bash(&self, code: String) -> CStmtRes {
@@ -83,7 +97,7 @@ impl<'a> Transpiler<'a> {
 
     pub fn transpile_stmt_print(&self, p: &PrintStmt) -> CStmtRes {
         Ok(CStmt::Expr(Box::new(CExpr::FnCall(CFnCall {
-            name: "printf".to_string(),
+            name: "PRINT".to_string(),
             args: vec![self.transpile_expr(&p.value)?]
         }))))
     }
@@ -107,6 +121,7 @@ impl<'a> Transpiler<'a> {
 
     pub fn transpile_expr(&self, expr: &Expr) -> CExprRes {
         match expr {
+            Expr::FnCall(f) => self.transpile_expr_fncall(f),
             Expr::Binary(b) => self.transpile_expr_binary(b),
             Expr::Read => self.transpile_expr_read(),
             Expr::Comparison { lhs, op, rhs } => self.transpile_expr_compare(lhs, op, rhs),
@@ -115,6 +130,22 @@ impl<'a> Transpiler<'a> {
             Expr::Bool(b) => self.transpile_expr_bool(*b),
             Expr::Ident(i) => self.transpile_expr_ident(i.to_owned()),
         }
+    }
+
+    pub fn transpile_expr_fncall(&self, f: &FnCall) -> CExprRes {
+        c_expr_res!(CExpr::FnCall(CFnCall {
+            name: f.name.to_owned(),
+            args: {
+                // Transpile each expression
+                let mut transpiled_expressions = Vec::new();
+
+                for expr in f.args.iter() {
+                    transpiled_expressions.push(self.transpile_expr(expr)?);
+                }
+
+                transpiled_expressions
+            }
+        }))
     }
 
     pub fn transpile_expr_binary(&self, b: &BinaryExpr) -> CExprRes {

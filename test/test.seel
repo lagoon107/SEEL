@@ -1,7 +1,33 @@
+// Gets terminal input and assigns it to a variable
 input = read;
 
+// Assigns to a variable
 x = 23;
 
+// Prints a variable
+print x;
+
+// Defines a function that prints a number
+fn print_num(num) {
+    printf!("%d\n", num);
+}
+
+// Returns the noise a dog makes
+fn dog_noise() {
+    ret "woof";
+}
+
+// Call print_num with number arg
+print_num!(23);
+
+// Prints output if x <= 23
 if x <= 23 {
     print "x > 23";
+    x = printf!("%d\n", 23);
 }
+
+// Prints the noise a dog makes
+print dog_noise!();
+
+// Runs a line of code directly in the terminal
+'"PAUSE"';

@@ -1,6 +1,17 @@
-use crate::parser::{Stmt, PrintStmt, AssignStmt, Expr, CompareOp, BinaryExpr, Op};
+use crate::parser::{Stmt, FnDef, FnCall, PrintStmt, AssignStmt, Expr, CompareOp, BinaryExpr, Op};
 
 grammar;
+
+/// A comma seperated list of items.
+Comma<T>: Vec<T> = { // (1)
+    <mut v:(<T> ",")*> <e:T?> => match e { // (2)
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+};
 
 /// A program consisting of many statements.
 pub Program: Vec<Stmt> = {
@@ -9,6 +20,21 @@ pub Program: Vec<Stmt> = {
 
 /// A statement.
 pub Stmt: Stmt = {
+    /// A function definition.
+    "fn" <name:PlainIdent> "(" <params:Comma<PlainIdent>> ")" <code:CodeBlock> => {
+        Stmt::FnDef(FnDef {
+            name: name,
+            params: params,
+            code: match code {
+                Stmt::Block(b) => b,
+                s => panic!("expected code block after fn, got '{:?}'", s)
+            }
+        })
+    },
+
+    /// A return statement.
+    "ret" <Expr> StmtDelim => Stmt::Return(<>),
+
     /// An if statement.
     "if" <cond:Comparison> <c:CodeBlock> => Stmt::If {
         comparison: cond,
@@ -44,7 +70,7 @@ pub Stmt: Stmt = {
     }),
 
     // An expression
-    <Expr> => Stmt::Expr(<>)
+    <Expr> StmtDelim => Stmt::Expr(<>)
 }
 
 /// A code block.
@@ -58,6 +84,17 @@ pub Expr: Box<Expr> = {
     /// An expression that gathers input from terminal, with an optional message prepended.
     "read" => Box::new(
         Expr::Read
+    ),
+
+    /// A function call.
+    <i:Ident> "!(" <args:Comma<Expr>> ")" => Box::new(
+        Expr::FnCall(FnCall {
+            name: match *i {
+                Expr::Ident(i) => i,
+                _ => panic!("Ident expected before args in function call!")
+            },
+            args: args
+        })
     ),
 
     // Bool stuff
@@ -122,6 +159,9 @@ pub Ident: Box<Expr> = r#"[a-z_A-Z]+"# => Box::new(
         .replace("\"", "")
     )
 );
+
+/// An ident that is returned as a string.
+pub PlainIdent: String = r#"[a-z_A-Z]+"# => <>.to_string().replace("\"", "");
 
 /// A numeric literal.
 Num: Box<Expr> = {

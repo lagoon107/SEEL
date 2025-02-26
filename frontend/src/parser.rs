@@ -1,6 +1,11 @@
 /// A statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
+    /// A function definition
+    FnDef(FnDef),
+    /// A return statement (eg. "return 23;").
+    Return(Box<Expr>),
+
     /// An if statement.
     If { comparison: Box<Expr>, code: Vec<Stmt> },
 
@@ -15,6 +20,14 @@ pub enum Stmt {
     Assign(AssignStmt),
     // An expression
     Expr(Box<Expr>),
+}
+
+/// A function definition.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FnDef {
+    pub name: String,
+    pub params: Vec<String>,
+    pub code: Vec<Stmt>
 }
 
 /// A print statement.
@@ -60,6 +73,8 @@ pub enum Expr {
     /// An expression that reads terminal input.
     Read,
 
+    FnCall(FnCall),
+
     // Bools
     Bool(bool),
 
@@ -77,6 +92,12 @@ pub enum Expr {
     Str(String),
     // An identifier
     Ident(String)
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FnCall {
+    pub name: String,
+    pub args: Vec<Box<Expr>>
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -105,6 +126,14 @@ mod tests {
     // Use stuff
     use super::*;
     use crate::grammar;
+
+    #[test]
+    fn test_parser_fndef() {
+        let code = "fn t() { print 23; }";
+        let parser = grammar::StmtParser::new();
+
+        parser.parse(code).unwrap();
+    }
 
     #[test]
     fn test_parser_if() {
