@@ -1,4 +1,4 @@
-use crate::parser::{Stmt, FnDef, FnCall, PrintStmt, AssignStmt, Expr, CompareOp, BinaryExpr, Op};
+use crate::parser::{Stmt, EntryDef, FnDef, FnCall, PrintStmt, AssignStmt, Expr, CompareOp, BinaryExpr, Op};
 
 grammar;
 
@@ -15,11 +15,19 @@ Comma<T>: Vec<T> = { // (1)
 
 /// A program consisting of many statements.
 pub Program: Vec<Stmt> = {
-    <s:(Stmt)+> => s
+    <s:(Stmt)*> => s
 }
 
 /// A statement.
 pub Stmt: Stmt = {
+    /// The program entry function definition.
+    "main" "::" <code:CodeBlock> => Stmt::EntryDef(EntryDef {
+        code: match code {
+                Stmt::Block(b) => b,
+                s => panic!("expected code block after fn, got '{:?}'", s)
+        }
+    }),
+
     /// A function definition.
     "fn" <name:PlainIdent> "(" <params:Comma<PlainIdent>> ")" <code:CodeBlock> => {
         Stmt::FnDef(FnDef {

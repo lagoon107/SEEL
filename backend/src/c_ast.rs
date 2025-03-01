@@ -23,7 +23,9 @@ pub struct CFnDef {
     pub name: String,
     /// A list of params with a type and name (eg. "auto x").
     pub params: Vec<(String, String)>,
-    pub code: Vec<CStmt>
+    pub code: Vec<CStmt>,
+    /// The type to return.
+    pub return_t: String
 }
 
 /// An C assignment statement.

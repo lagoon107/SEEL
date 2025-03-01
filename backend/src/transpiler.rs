@@ -45,6 +45,9 @@ impl<'a> Transpiler<'a> {
 
     pub fn transpile_stmt(&self, stmt: &Stmt) -> CStmtRes {
         Ok(match stmt {
+            // The "main()" function
+            Stmt::EntryDef(e) => self.transpile_stmt_entrydef(e)?,
+            // Regular function definition
             Stmt::FnDef(f) => self.transpile_stmt_fndef(f)?,
             Stmt::Return(val) => self.transpile_stmt_return(val)?,
             Stmt::Bash(b) => self.transpile_stmt_bash(b.to_owned())?,
@@ -60,11 +63,21 @@ impl<'a> Transpiler<'a> {
         Ok(CStmt::Return(self.transpile_expr(value)?))
     }
 
+    pub fn transpile_stmt_entrydef(&self, entrydef: &EntryDef) -> CStmtRes {
+        Ok(CStmt::FnDef(CFnDef {
+            name: "main".to_string(),
+            params: vec![],
+            code: self.transpile_program(&entrydef.code)?,
+            return_t: "int".to_string()
+        }))
+    }
+
     pub fn transpile_stmt_fndef(&self, fndef: &FnDef) -> CStmtRes {
         Ok(CStmt::FnDef(CFnDef {
             name: fndef.name.to_owned(),
             params: fndef.params.to_owned().into_iter().map(|i| ("auto".to_string(), i)).collect(),
-            code: self.transpile_program(&fndef.code)?
+            code: self.transpile_program(&fndef.code)?,
+            return_t: "auto".to_string()
         }))
     }
 

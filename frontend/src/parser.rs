@@ -1,6 +1,9 @@
 /// A statement.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
+    /// A entrypoint definition.
+    EntryDef(EntryDef),
+
     /// A function definition
     FnDef(FnDef),
     /// A return statement (eg. "return 23;").
@@ -20,6 +23,12 @@ pub enum Stmt {
     Assign(AssignStmt),
     // An expression
     Expr(Box<Expr>),
+}
+
+/// An entry function definition.
+#[derive(Clone, Debug, PartialEq)]
+pub struct EntryDef {
+    pub code: Vec<Stmt>
 }
 
 /// A function definition.
@@ -126,6 +135,14 @@ mod tests {
     // Use stuff
     use super::*;
     use crate::grammar;
+
+    #[test]
+    fn test_parser_entrydef() {
+        let code = "main :: { print 23; }";
+        let parser = grammar::StmtParser::new();
+
+        parser.parse(code).unwrap();
+    }
 
     #[test]
     fn test_parser_fndef() {
@@ -257,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_parser_read() {
-        let code = "read";
+        let code = "read;";
         let parser = grammar::StmtParser::new();
 
         assert_eq!(parser.parse(code), Ok(Stmt::Expr(Box::new(Expr::Read))));
@@ -265,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_parser_binary() {
-        let code = "23 + 42";
+        let code = "23 + 42;";
         let parser = grammar::StmtParser::new();
 
         assert_eq!(
@@ -294,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_parser_num() {
-        let code = "23";
+        let code = "23;";
         let parser = grammar::StmtParser::new();
 
         assert_eq!(parser.parse(code), Ok(Stmt::Expr(Box::new(Expr::Num(23.0)))));

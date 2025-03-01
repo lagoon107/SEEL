@@ -15,6 +15,7 @@ pub trait Writer {
     gen_writer_fn!{
         // Statements
         &CStmt => write_stmt,
+        &CFnDef => write_stmt_lambda,
         &CFnDef => write_stmt_fndef,
         &CExpr => write_stmt_return,
         &Vec<CStmt> => write_stmt_block,
@@ -32,7 +33,11 @@ pub trait Writer {
         &str => write_expr_ident,
 
         &COp => write_num_op,
-        &CCompareOp => write_compare_op
+        &CCompareOp => write_compare_op,
+
+        // General
+        &Vec<CStmt> => write_program,
+        String => write_type
     }
 }
 
@@ -96,9 +101,7 @@ impl CWriter {
 
             {custom_std}
 
-            int main() {{
-                {code}
-            }}
+            {code}
             ",
             custom_std = Self::custom_std()
         )
@@ -106,7 +109,7 @@ impl CWriter {
 
     /// Converts CAst to C code.
     pub fn run(&self, ast: &Vec<CStmt>) -> anyhow::Result<String> {
-        self.write_stmt_block(ast)?;
+        self.write_program(ast)?;
 
         // Return code emmited
         Ok(Self::combine_code(self.code.borrow().code.to_owned()))
@@ -114,9 +117,24 @@ impl CWriter {
 }
 
 impl Writer for CWriter {
+    /// Writes ast into code, going line by line.
+    fn write_program(&self, ast: &Vec<CStmt>) -> anyhow::Result<()> {
+        for stmt in ast {
+            self.write_stmt(stmt)?;
+            // Write semicolon and newline
+            self.code.borrow_mut().write(";\n");
+        }
+
+        Ok(())
+    }
+
     fn write_stmt(&self, stmt: &CStmt) -> anyhow::Result<()> {
         match stmt {
-            CStmt::FnDef(f) => self.write_stmt_fndef(f),
+            // Only writes a non-lambda function definition for "main"
+            CStmt::FnDef(f) => match f.name.as_str() {
+                "main" => self.write_stmt_fndef(f),
+                _ => self.write_stmt_lambda(f)
+            },
             CStmt::Return(val) => self.write_stmt_return(val),
             CStmt::Block(b) => self.write_stmt_block(b),
             CStmt::If { .. } => self.write_stmt_if(stmt),
@@ -125,11 +143,15 @@ impl Writer for CWriter {
         }
     }
 
-    fn write_stmt_fndef(&self, stmt: &CFnDef) -> anyhow::Result<()> {
+    fn write_stmt_lambda(&self, stmt: &CFnDef) -> anyhow::Result<()> {
+        self.write_expr_ident("static ")?;
+
         // Write return type
-        self.code.borrow_mut().write("auto ");
+        self.write_type(stmt.return_t.clone())?;
         // Write function identifier
         self.write_expr_ident(&stmt.name)?;
+
+        // Write =
         self.write_expr_ident("=")?;
 
         // Write opening of param list
@@ -157,6 +179,46 @@ impl Writer for CWriter {
 
         // Write body
         self.write_stmt_block(&stmt.code)?;
+
+        Ok(())
+    }
+
+    fn write_stmt_fndef(&self, stmt: &CFnDef) -> anyhow::Result<()> {
+        // Write return type
+        self.write_type(stmt.return_t.clone())?;
+        // Write function identifier
+        self.write_expr_ident(&stmt.name)?;
+
+        // Write opening of param list
+        self.code.borrow_mut().write("(");
+
+        // Write function params
+        let mut i = 1;
+        for param in stmt.params.iter() {
+            // Write param type
+            self.write_expr_ident(format!("{} ", param.0).as_str())?;
+            // Write param name
+            self.write_expr_ident(&param.1)?;
+
+            // Add comma if not at end of params list
+            if i != stmt.params.len() {
+                self.code.borrow_mut().write(", ");
+            }
+
+            i += 1;
+        }
+
+        // Write closing paren of param list
+        self.code.borrow_mut().write(")");
+
+        // Write body
+        self.write_stmt_block(&stmt.code)?;
+
+        Ok(())
+    }
+
+    fn write_type(&self, c_type: String) -> anyhow::Result<()> {
+        self.code.borrow_mut().write(format!("{c_type} ").as_str());
 
         Ok(())
     }
